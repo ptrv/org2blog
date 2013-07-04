@@ -640,13 +640,13 @@ from currently logged in."
               (goto-char pos)
               ;; Search for code
               (save-match-data
-                (search-forward code nil t 1)
-                (setq pos (match-end 0))
-                (goto-char (match-beginning 0))
-                ;; Search for a header line --
-                (search-backward "[sourcecode]" nil t 1)
-                ;; Replace the text with our new header
-                (replace-match header nil t))
+                (when (search-forward code nil t 1)
+		  (setq pos (match-end 0))
+		  (goto-char (match-beginning 0))
+		  ;; Search for a header line --
+		  (search-backward "[sourcecode]" nil t 1)
+		  ;; Replace the text with our new header
+		  (replace-match header nil t)))
               (setq html (buffer-substring-no-properties (point-min) (point-max)))))))))
   html)
 
