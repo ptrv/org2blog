@@ -173,7 +173,7 @@ be on your emacs load-path for this to work."
 (defcustom org2blog/wp-sourcecode-langs
   (list "actionscript3" "bash" "coldfusion" "cpp" "csharp" "css" "delphi"
         "erlang" "fsharp" "diff" "groovy" "javascript" "java" "javafx" "matlab"
-        "objc" "perl" "php" "text" "powershell" "python" "ruby" "scala" "sql"
+        "objc" "perl" "php" "text" "powershell" "python" "r" "ruby" "scala" "sql"
         "vb" "xml")
   "List of languages supported by sourcecode shortcode of WP."
   :group 'org2blog/wp
@@ -605,6 +605,7 @@ from currently logged in."
               (delete-region code-start code-end)
               ;; Stripping out all the code highlighting done by htmlize
               (setq code (replace-regexp-in-string "<.*?>" "" code))
+              (setq code (org2blog/wp-sourcecode-no-escape code))
               (insert (concat "\n[sourcecode]\n" code "[/sourcecode]\n")))))
 
         ;; Get the new html!
@@ -622,9 +623,7 @@ from currently logged in."
         ;; Get the syntaxhl params and other info about the src_block
         (let* ((info (org-babel-get-src-block-info))
                (params (nth 2 info))
-               (code (if (version-list-< (version-to-list (org-version)) '(8 0 0))
-                         (org-html-protect (nth 1 info))
-                       (org-html-encode-plain-text (nth 1 info))))
+               (code (nth 1 info))
                (org-src-lang
                  (or (cdr (assoc (nth 0 info) org2blog/wp-shortcode-langs-map))
                      (nth 0 info)))
@@ -644,13 +643,13 @@ from currently logged in."
               (goto-char pos)
               ;; Search for code
               (save-match-data
-                (search-forward code nil t 1)
-                (setq pos (match-end 0))
-                (goto-char (match-beginning 0))
-                ;; Search for a header line --
-                (search-backward "[sourcecode]" nil t 1)
-                ;; Replace the text with our new header
-                (replace-match header nil t))
+                (when (search-forward code nil t 1)
+		  (setq pos (match-end 0))
+		  (goto-char (match-beginning 0))
+		  ;; Search for a header line --
+		  (search-backward "[sourcecode]" nil t 1)
+		  ;; Replace the text with our new header
+		  (replace-match header nil t)))
               (setq html (buffer-substring-no-properties (point-min) (point-max)))))))))
   html)
 
@@ -1145,5 +1144,16 @@ the title of the post (or page) as description."
                    post-id))
       ;; Insert!
       (insert (format "[[%s][%s]]" url post-title)))))
+
+(defun org2blog/wp-sourcecode-no-escape (text)
+  "Convert HTML entities to TEXT equivalent. This is useful to pass to
+the SyntaxHighlighter Evolved Wordpress plugin, since it does not expect
+pre-escaped HTML. 
+Possible conversions are set in `org-html-protect-char-alist'."
+  (mapc
+   (lambda (pair)
+     (setq text (replace-regexp-in-string (cdr pair) (car pair) text t t)))
+   org-html-protect-char-alist)
+  text)
 
 (provide 'org2blog)
